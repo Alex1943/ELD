@@ -1,0 +1,19 @@
+{
+  "name": "ELD-RAW-v1.0",
+  "experiment_note": "使用ELD原始四通道U-Net适配DatasetGen单帧RAW；输入按1023归一化、GT保持线性HDR，使用原始L1目标；每8个等间隔检查点保存并在manifest测试集评测。",
+  "data_root": "D:/work/pycharm_work/DatasetGen/hdr_video_data/result_single_recipe",
+  "manifest": "manifest.csv",
+  "datasetgen_root": "D:/work/pycharm_work/DatasetGen",
+  "subsets": "all",
+  "patch_size": 128,
+  "batch_size": 1,
+  "workers": 4,
+  "lr": 0.0001,
+  "total_iter": 300000,
+  "checkpoints": 8,
+  "log_interval": 100,
+  "save_image_interval": 0,
+  "seed": 0,
+  "output_dir": "./checkpoints",
+  "device_ids": "0"
+}
