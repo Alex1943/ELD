@@ -5,16 +5,16 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from raw_paths import resolve_path
 
 
 def _resolve(root, value):
-    value = str(value).replace('\\', os.sep).replace('/', os.sep)
-    return value if os.path.isabs(value) else os.path.join(root, value)
+    return resolve_path(value, root)
 
 
 class RawManifestDataset(Dataset):
     def __init__(self, root, manifest, split, patch_size=0, subsets='all'):
-        self.root = os.path.abspath(root)
+        self.root = resolve_path(root, os.getcwd())
         path = _resolve(self.root, manifest)
         with open(path, newline='', encoding='utf-8-sig') as f:
             rows = list(csv.DictReader(f))

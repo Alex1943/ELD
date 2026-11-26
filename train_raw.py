@@ -4,24 +4,35 @@ import csv
 import json
 import os
 import sys
+import importlib.util
 from collections import defaultdict
 
-import torch
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-
-from dataset.raw_manifest import RawManifestDataset
-from models.arch.Unet import UNetSeeInDark
+from raw_paths import check_paths
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--config', default='options/raw_eld.json')
     p.add_argument('--gpu-ids', default=None, help='physical GPU IDs, e.g. 0 or 2,3')
+    p.add_argument('--check-paths', action='store_true', help='validate platform paths without importing PyTorch')
     a = p.parse_args()
-    cfg = json.load(open(a.config, encoding='utf-8'))
+    with open(a.config, encoding='utf-8') as handle:
+        cfg = check_paths(json.load(handle))
+    if a.check_paths:
+        return
     gpu_ids = a.gpu_ids or cfg.get('device_ids', '0')
     os.environ['CUDA_VISIBLE_DEVICES'] = gpu_ids
+    global torch, tqdm
+    import torch
+    from tqdm import tqdm
+    from torch.utils.data import DataLoader
+    from dataset.raw_manifest import RawManifestDataset
+    # Load the original architecture without executing models/__init__.py,
+    # which eagerly imports the SID/rawpy pipeline and ELD's util package.
+    spec = importlib.util.spec_from_file_location(
+        'eld_raw_unet', os.path.join(os.path.dirname(__file__), 'models', 'arch', 'Unet.py'))
+    arch = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(arch)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     ids = [x.strip() for x in gpu_ids.split(',') if x.strip()]
     torch.manual_seed(cfg['seed']); torch.cuda.manual_seed_all(cfg['seed']) if torch.cuda.is_available() else None
@@ -29,15 +40,14 @@ def main():
     test = RawManifestDataset(cfg['data_root'], cfg['manifest'], 'test', 0, cfg['subsets'])
     loader = DataLoader(ds, batch_size=cfg['batch_size']*max(1,len(ids)), shuffle=True,
                         num_workers=cfg['workers'], pin_memory=device.type=='cuda', drop_last=True)
-    model = UNetSeeInDark(4,4).to(device)
+    model = arch.UNetSeeInDark(4,4).to(device)
     if len(ids)>1 and device.type=='cuda': model = torch.nn.DataParallel(model, device_ids=list(range(len(ids))))
     optim = torch.optim.Adam(model.parameters(), lr=cfg['lr'], betas=(0.9,0.999))
     outdir = os.path.join(cfg['output_dir'], cfg['name']); os.makedirs(outdir, exist_ok=True)
     # DatasetGen RawMetricProtocol is the official ISP/metric authority.
     metric_root = os.path.abspath(cfg['datasetgen_root'])
     sys.path.insert(0, metric_root)
-    from degradation_metrics.protocol import RawMetricProtocol
-    from util.util import mu_tonemap
+    from degradation_metrics.protocol import RawMetricProtocol, mu_tonemap
     protocol = RawMetricProtocol(hdr_scale=16, mu=5000, demosaic='net')
     total, checkpoints = int(cfg['total_iter']), int(cfg['checkpoints'])
     interval = max(1, total // checkpoints); step = 0; epoch = 0

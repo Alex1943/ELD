@@ -1,9 +1,15 @@
 {
   "name": "ELD-RAW-v1.0",
-  "experiment_note": "使用ELD原始四通道U-Net适配DatasetGen单帧RAW；输入按1023归一化、GT保持线性HDR，使用原始L1目标；每8个等间隔检查点保存并在manifest测试集评测。",
-  "data_root": "D:/work/pycharm_work/DatasetGen/hdr_video_data/result_single_recipe",
+  "experiment_note": "使用ELD原始四通道U-Net适配DatasetGen单帧RAW；输入按1023归一化、GT保持线性HDR，训练使用Bracketing风格RAW/16的μ-law L1（非ELD原始线性L1），保持原U-Net、Adam、300000步及8次保存评测；数据及ISP根按Windows/Linux自动选择，正式测试使用1.3gt数据manifest测试集与DatasetGen learned ISP。",
+  "data_root": {
+    "windows": "D:/work/pycharm_work/DatasetGen/hdr_video_data/result_single_recipe",
+    "linux": "/mnt/0c2bda26-6d90-4191-a48d-8f7367e86893/students/lihaotian/DataSet/raw_dege_1.3_gtAdjust"
+  },
   "manifest": "manifest.csv",
-  "datasetgen_root": "D:/work/pycharm_work/DatasetGen",
+  "datasetgen_root": {
+    "windows": "D:/work/pycharm_work/DatasetGen",
+    "linux": "/mnt/0c2bda26-6d90-4191-a48d-8f7367e86893/students/lihaotian/raw-single/raw-data-gen"
+  },
   "subsets": "all",
   "patch_size": 128,
   "batch_size": 1,
