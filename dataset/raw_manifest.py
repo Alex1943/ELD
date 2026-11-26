@@ -1,20 +1,24 @@
 """DatasetGen manifest adapter for single-frame packed RAW."""
 import csv
 import os
+import platform
+from pathlib import PureWindowsPath
 
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from raw_paths import resolve_path
 
 
 def _resolve(root, value):
-    return resolve_path(value, root)
+    if platform.system() == 'Linux' and PureWindowsPath(str(value)).drive:
+        raise ValueError('Windows path cannot be used on Linux: %s' % value)
+    value = os.path.expanduser(str(value)).replace('\\', os.sep).replace('/', os.sep)
+    return os.path.normpath(value if os.path.isabs(value) else os.path.join(root, value))
 
 
 class RawManifestDataset(Dataset):
     def __init__(self, root, manifest, split, patch_size=0, subsets='all'):
-        self.root = resolve_path(root, os.getcwd())
+        self.root = _resolve(os.getcwd(), root)
         path = _resolve(self.root, manifest)
         with open(path, newline='', encoding='utf-8-sig') as f:
             rows = list(csv.DictReader(f))

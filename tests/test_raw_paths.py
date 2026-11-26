@@ -3,12 +3,34 @@ import json
 import os
 import posixpath
 import unittest
+import shutil
+import subprocess
+import sys
+import tempfile
 from unittest.mock import patch
 
-import raw_paths
+import train_raw as raw_paths
 
 
 class RawPathsTests(unittest.TestCase):
+    def test_entrypoint_runs_without_raw_paths_module(self):
+        with tempfile.TemporaryDirectory() as root:
+            script = os.path.join(root, 'train_raw.py')
+            shutil.copyfile(raw_paths.__file__, script)
+            for name in ('manifest.csv', 'degradation_metrics/protocol.py', 'isp/model.bin'):
+                filename = os.path.join(root, name)
+                os.makedirs(os.path.dirname(filename), exist_ok=True)
+                with open(filename, 'w'):
+                    pass
+            cfg = {'data_root': root, 'datasetgen_root': root, 'manifest': 'manifest.csv'}
+            config = os.path.join(root, 'config.json')
+            with open(config, 'w') as handle:
+                json.dump(cfg, handle)
+            result = subprocess.run([sys.executable, script, '--config', config, '--check-paths'],
+                                    cwd=root, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('demosaic weights:', result.stdout)
+
     def setUp(self):
         with open(os.path.join(os.path.dirname(__file__), '..', 'options', 'raw_eld.json'), encoding='utf-8') as handle:
             self.cfg = json.load(handle)

@@ -13,6 +13,6 @@ python train_raw.py --config options/raw_eld.json --gpu-ids 0
 python train_raw.py --config options/raw_eld.json --gpu-ids 0,1
 ```
 
-2026-11-26修复：原配置误把Windows路径用于Linux，现由`raw_paths.py`自动选择平台并预检；直接按文件加载ELD原U-Net，避免`models/__init__.py`提前导入SID/rawpy及ELD的`util`，污染DatasetGen同名模块；损失tone函数直接来自DatasetGen协议。GPU可见性在导入torch前设置。路径回归检查：`python -B -m unittest discover -s tests -v`。未安装、升级或修改已有依赖；服务器真实数据与CUDA训练仍需同步后验证。
+2026-11-26修复：原配置误把Windows路径用于Linux，现由入口自动选择平台并预检；直接按文件加载ELD原U-Net，避免`models/__init__.py`提前导入SID/rawpy及ELD的`util`，污染DatasetGen同名模块；损失tone函数直接来自DatasetGen协议。GPU可见性在导入torch前设置。后续针对服务器漏同步`raw_paths.py`导致的启动失败，将路径处理内联到`train_raw.py`和`dataset/raw_manifest.py`，两者均不再依赖该辅助文件。同步这两个文件及`options/raw_eld.json`即可启动。路径回归检查：`python -B -m unittest discover -s tests -v`。未安装、升级或修改已有依赖；服务器真实数据与CUDA训练仍需同步后验证。
 
 验证：6项路径回归与语法检查通过；本机`conda run -n seesr`下原U-Net 32×32四通道前向/反向、DatasetGen模块来源检查和真实`isp/model.bin`自比较评测通过（SSIM/μ-SSIM=1）。未在Linux服务器访问真实数据或运行完整训练。
